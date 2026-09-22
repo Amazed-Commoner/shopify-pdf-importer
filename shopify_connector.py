@@ -1,33 +1,94 @@
-import requests
 import os
+from typing import Any
 
-SHOPIFY_STORE = os.getenv("SHOPIFY_STORE", "your-store.myshopify.com")
-SHOPIFY_TOKEN = os.getenv("SHOPIFY_TOKEN", "shpat_xxx")
-API_VERSION = "2024-01"
+import httpx
 
-def create_shopify_product(product: dict):
-    """Creates product via Shopify Admin API"""
-    url = f"https://{SHOPIFY_STORE}/admin/api/{API_VERSION}/products.json"
-    headers = {"X-Shopify-Access-Token": SHOPIFY_TOKEN, "Content-Type": "application/json"}
-    payload = {
-        "product": {
-            "title": product["title"],
-            "body_html": product.get("body_html", ""),
-            "vendor": product.get("vendor", "Supplier Import"),
-            "product_type": product.get("product_type", ""),
-            "variants": [{"sku": product["sku"], "price": product["price"], "inventory_quantity": product["inventory"]}]
+
+def _shopify_config() -> tuple[str | None, str | None]:
+    store = os.getenv("SHOPIFY_STORE", "").strip()
+    token = os.getenv("SHOPIFY_TOKEN", "").strip()
+    if store and token:
+        if not store.startswith("http"):
+            store = f"https://{store}"
+        return store.rstrip("/"), token
+    return None, None
+
+
+async def push_products_to_shopify(products: list[dict[str, Any]]) -> dict[str, Any]:
+    store, token = _shopify_config()
+
+    if not store or not token:
+        created = [
+            {
+                "status": "mock",
+                "message": f"[MOCK] Would create: {p.get('title', '')} "
+                f"(SKU {p.get('sku', '')}, ${p.get('price', 0)})",
+            }
+            for p in products
+        ]
+        return {
+            "mode": "mock",
+            "store": None,
+            "requested": len(products),
+            "created": 0,
+            "failed": 0,
+            "results": created,
+            "note": "Set SHOPIFY_STORE and SHOPIFY_TOKEN env vars to push for real.",
         }
-    }
-    # For demo, we mock if no token
-    if "xxx" in SHOPIFY_TOKEN:
-        print(f"[MOCK] Would create: {product['title']} - {product['sku']}")
-        return {"id": 123, "mock": True, **product}
-    r = requests.post(url, json=payload, headers=headers)
-    r.raise_for_status()
-    return r.json()
 
-def bulk_import(products: list):
-    results = []
-    for p in products:
-        results.append(create_shopify_product(p))
-    return results
+    headers = {
+        "X-Shopify-Access-Token": token,
+        "Content-Type": "application/json",
+    }
+
+    created = 0
+    failed = 0
+    results: list[dict[str, Any]] = []
+
+    async with httpx.AsyncClient(timeout=30.0, headers=headers) as client:
+        for product in products:
+            payload = {
+                "product": {
+                    "title": product.get("title") or product.get("sku") or "Untitled",
+                    "vendor": "PDF Importer",
+                    "products_type": "Default",
+                    "status": "draft",
+                    "variants": [
+                        {
+                            "price": str(product.get("price") or 0),
+                            "sku": product.get("sku") or "",
+                            "inventory_quantity": int(product.get("inventory") or 0),
+                        }
+                    ],
+                }
+            }
+            if product.get("description"):
+                payload["product"]["body_html"] = product["description"]
+
+            try:
+                resp = await client.post(f"{store}/admin/api/2024-01/products.json", json=payload)
+                if resp.status_code in (200, 201):
+                    created += 1
+                    results.append({"status": "created", "sku": product.get("sku"), "title": product.get("title")})
+                else:
+                    failed += 1
+                    results.append(
+                        {
+                            "status": "failed",
+                            "sku": product.get("sku"),
+                            "code": resp.status_code,
+                            "body": resp.text[:300],
+                        }
+                    )
+            except Exception as exc:  # noqa: BLE001
+                failed += 1
+                results.append({"status": "error", "sku": product.get("sku"), "error": str(exc)})
+
+    return {
+        "mode": "live",
+        "store": store,
+        "requested": len(products),
+        "created": created,
+        "failed": failed,
+        "results": results,
+    }

@@ -1,27 +1,46 @@
-# Shopify Supplier PDF -> Product Importer API
+# Shopify Supplier PDF Importer
 
-Demo API built for Upwork Shopify clients.
+FastAPI service that parses supplier PDF price lists into Shopify-ready products (SKU, title, price, inventory) and optionally pushes them to the Shopify Admin API.
 
-### Quickstart
+## Endpoints
+
+| Method | Path | What it does |
+|--------|------|--------------|
+| GET | `/` | Service info |
+| POST | `/parse/shopify-supplier` | Upload PDF → returns JSON products |
+| POST | `/import/shopify` | Upload PDF → parses + pushes to Shopify (mock if no keys) |
+| GET | `/docs` | Interactive Swagger UI |
+
+## Run locally
+
 ```bash
 pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
-### Test
-1. Go to http://localhost:8000/docs
-2. Upload supplier PDF to /parse/shopify-supplier
-3. See JSON output
-4. Set env SHOPIFY_STORE and SHOPIFY_TOKEN then call /import/shopify
+Open http://127.0.0.1:8000/docs
 
-### Env vars
-```
-SHOPIFY_STORE=your-store.myshopify.com
-SHOPIFY_TOKEN=shpat_xxxxx
+## Push to Shopify (optional)
+
+Set env vars when a client hires you:
+
+```powershell
+$env:SHOPIFY_STORE = "your-store.myshopify.com"
+$env:SHOPIFY_TOKEN = "shpat_xxxxxxxx"
 ```
 
-### What to show client in Loom
-- Upload their PDF
-- Show parsed JSON in Swagger
-- Show mock Shopify creation log
-- ROI: 10 hrs -> 2 mins
+Without these, `/import/shopify` runs in **mock mode** and prints what it *would* create — perfect for demos.
+
+## Deploy (Render)
+
+1. Push this folder to GitHub
+2. Render → New → Web Service → connect repo
+3. Build: `pip install -r requirements.txt`
+4. Start: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+5. Use `https://<your-app>.onrender.com/docs` in proposals
+
+## How parsing works
+
+1. **pdfplumber** — extracts tables (handles 90% of supplier PDFs)
+2. **PyMuPDF** — fallback, regex over raw text lines
+3. Scanned/image-only PDFs → no results (OCR not included in MVP)

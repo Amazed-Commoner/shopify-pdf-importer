@@ -1,19 +1,41 @@
-# Loom Script - 2 min Demo That Closes
+# Loom Script — "I parsed a supplier PDF into Shopify in 47 seconds"
 
-**Title:** I parsed your supplier PDF - here's how it auto-creates Shopify products
+Total: ~2 minutes. Record screen + webcam.
 
-**0-10s - Hook (show their PDF)**
-"Hey {Name}, you mentioned you get supplier PDFs like this {show PDF}. I ran 3 pages through the importer I built for Shopify stores."
+## 0:00 — Hook
 
-**10-40s - Parse (show /docs)**
-"Upload... and look - it instantly pulled SKU, title, price, stock. {scroll JSON}. No manual typing, handles tables even if scanned."
+Show the supplier PDF (scroll 2–3 pages).
 
-**40-70s - Shopify Push (show terminal/logs)**
-"Now with one click, it creates these as products via Shopify API. Here's the log - {show MOCK creation}. Price, inventory, SKU all mapped. If you have variants/images, I map those too."
+> "This is a 40-page supplier price list. My client used to spend 9 hours typing these into Shopify by hand."
 
-**70-100s - ROI + CTA**
-"This saves my current client 11 hours a week. For your store, I'd tailor it to your exact supplier layout and set up daily auto-import so new PDFs just sync.
+## 0:10 — The parse
 
-Want me to run your full 200-page PDF today and send you the import-ready CSV + Shopify preview? Takes me 20 minutes."
+Open http://localhost:8000/docs → POST /parse/shopify-supplier → Try it out → upload PDF → Execute.
 
-**End screen: Link to API docs + Upwork profile**
+Highlight the JSON: SKU, title, price, inventory.
+
+> "One upload. Structured JSON, ready for Shopify. No VA, no copy-paste."
+
+## 0:40 — The push
+
+Show terminal or POST /import/shopify output:
+
+```
+[MOCK] Would create: Linen Shirt (SKU SHIRT-001, $49.99)
+```
+
+> "With a Shopify token, this creates real products as drafts in the store. Without it, mock mode for safe demos."
+
+## 1:10 — ROI close
+
+> "If you're entering supplier PDFs by hand, this replaces 10+ hours a week. I'll tune the parser to YOUR supplier's layout — free 3-page demo today. Send me a sample PDF."
+
+## 1:40 — CTA
+
+Point at your API docs URL (Render link) or Upwork profile.
+
+> "Live demo link is in the description. Let's get your next catalog in without the busywork."
+
+## Title for Loom
+
+`I parsed a supplier PDF into Shopify in 47 seconds`
